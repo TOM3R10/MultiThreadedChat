@@ -85,7 +85,7 @@ msg_pack_t* msg_pack_to_string(server_t *server_data, msg_t *msg) {
     bzero(msg_pack, sizeof(msg_pack_t));
 
     strncpy(msg_pack->buffer, msg->buffer, CLIENT_MAX_BUFFER_SIZE);
-    printf("MESSAGE CLIENT ID IS: %d", msg->client_id);
+    printf("%d", msg->client_id);
 
     strncpy(msg_pack->sender_name, server_data->clients_arr[msg->client_id].name, CLIENT_MAX_NAME_SIZE);
 
@@ -98,8 +98,6 @@ void broadcast_message(client_t *clients_array, msg_pack_t *msg_pack) {
 
     for (int i = 0; i < clients_connected; i++) {
         int receiver_fd = clients_array[i].socket_fd;
-
-            printf("%s\n", msg_pack->sender_name);
 
             // Check if the reciever is this client
             if (send(receiver_fd, msg_pack, sizeof(msg_pack_t), 0) == -1) {
