@@ -1,41 +1,73 @@
-#include "../HEADERS/client.h"
-#include "../HEADERS/server.h"
+#include "../HEADERS/headers.h"
 
-int main() {
-    int client_socket_fd;
-    struct sockaddr_in server_addr;
-    char buffer[CLIENT_BUFFER_SIZE];
 
-    if ((client_socket_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        perror("Failed to create a socket");
-        return 1;
+/*void add_msg_to_client_array(client_t *client, int msg_index) {
+    // realloc memory in the array for this index
+    client->msg_array = (uint *)realloc(client->msg_array, sizeof(uint) * ++client->msg_array_len);
+    if (!client->msg_array) {
+        perror("Realloc failed in [add_msg_to_client_array]");
     }
+    client->msg_array[client->msg_array_len - 1] = msg_index;
+}*/
+pthread_mutex_t mutex_print, mutex_socket_funcs;
 
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(SERVER_SERVER_PORT);
-    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");  // assuming the server is running on localhost
 
-    if (connect(client_socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
-        perror("Failed to connect");
-        close(client_socket_fd);
-        return 1;
+void* pthread_recv_message(void* sock_fd) {
+    // Create a msg struct to store the buffer
+    msg_pack_t msg_pack;
+
+    pthread_mutex_lock(&mutex_print);
+    int socket_fd = *((int *)sock_fd);
+    pthread_mutex_unlock(&mutex_print);
+
+
+    while(recv(
+    socket_fd,
+    &msg_pack,
+    sizeof(msg_pack_t), 0) > 0) {
+
+        pthread_mutex_lock(&mutex_print);
+        printf("[%s]: %s\n", msg_pack.sender_name, msg_pack.buffer);
+        // printf("\r\033[k");
+        fflush(stdout);
+        pthread_mutex_unlock(&mutex_print);
+        usleep(50000);
+
+
     }
+    pthread_exit(NULL);
+}
 
-    printf("Connected to server at 127.0.0.1:%d\n", SERVER_SERVER_PORT);
-    fflush(stdout);
+
+void* pthread_send_message(void* fd) {
+    msg_t *msg = (msg_t *)malloc(sizeof(msg_t));
+    if (!msg)
+        return NULL;
+
+    bzero(msg, sizeof(msg_t));
+
+    pthread_mutex_lock(&mutex_print);
+    int client_fd = *(int *)(fd);
+    pthread_mutex_unlock(&mutex_print);
 
     while (1) {
+
+        pthread_mutex_lock(&mutex_print);
+
         printf("Send message: ");
-        fgets(buffer, sizeof(buffer), stdin);
+        fflush(stdout);
+        pthread_mutex_unlock(&mutex_print);
+        fgets(msg->buffer, sizeof(msg->buffer), stdin);
+        fflush(stdin);
 
         // Send message to server
-        if (send(client_socket_fd, buffer, strlen(buffer), 0) == -1) {
+        if (send(client_fd, msg, sizeof(msg_t), 0) == -1) {
             perror("Failed to send message");
-            close(client_socket_fd);
+            close(client_fd);
             exit(1);
         }
+        usleep(50000);
     }
 
-    close(client_socket_fd);
-    return 0;
+    pthread_exit(NULL);
 }
