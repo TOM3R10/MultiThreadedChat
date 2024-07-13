@@ -2,15 +2,15 @@
 
 
 pthread_mutex_t mutex_array_lock, mutex_server_data_lock;
-int clients_connected = 0; // Amount of users connected
+int clients_connected = 1; // Amount of users connected
 int messages_sent = 0; // ammount of messages sent
 
 
 // Return client index on sucsees, and -1 if not
 int add_client(server_t *server_data, client_t *client) {
     // Malloc if this is the first client
-    if (clients_connected == 0) {
-        server_data->clients_arr = (client_t *)malloc(sizeof(client_t));
+    if (clients_connected == 1) {
+        server_data->clients_arr = (client_t *)malloc(sizeof(client_t) * (clients_connected + 1));
         if (!server_data->clients_arr) {
             perror("Malloc failed at [add_client]");
             return -1;
@@ -85,7 +85,7 @@ msg_pack_t* msg_pack_to_string(server_t *server_data, msg_t *msg) {
     bzero(msg_pack, sizeof(msg_pack_t));
 
     strncpy(msg_pack->buffer, msg->buffer, CLIENT_MAX_BUFFER_SIZE);
-    printf("MESSAGE CLIENT ID IS: %d", msg->client_id);
+    printf("%d", msg->client_id);
 
     strncpy(msg_pack->sender_name, server_data->clients_arr[msg->client_id].name, CLIENT_MAX_NAME_SIZE);
 
@@ -96,10 +96,8 @@ msg_pack_t* msg_pack_to_string(server_t *server_data, msg_t *msg) {
 void broadcast_message(client_t *clients_array, msg_pack_t *msg_pack) {
     pthread_mutex_lock(&mutex_array_lock); // Lock the clients array
 
-    for (int i = 0; i < clients_connected; i++) {
+    for (int i = 1; i < clients_connected; i++) {
         int receiver_fd = clients_array[i].socket_fd;
-
-            printf("%s\n", msg_pack->sender_name);
 
             // Check if the reciever is this client
             if (send(receiver_fd, msg_pack, sizeof(msg_pack_t), 0) == -1) {
@@ -114,6 +112,7 @@ void broadcast_message(client_t *clients_array, msg_pack_t *msg_pack) {
 
 
 void* pthread_handle_connection(void *args) {
+    pthread_mutex_lock(&mutex_server_data_lock);
     pthread_hc_args *arg = (pthread_hc_args *)args;
     client_t *client = (client_t *)malloc(sizeof(client_t));
     bzero(client, sizeof(client_t));
@@ -121,17 +120,16 @@ void* pthread_handle_connection(void *args) {
     // retrieve id;
     int *client_id = arg->client_id;
 
-    pthread_mutex_lock(&mutex_server_data_lock);
 
     server_t *server_data = arg->server_pointer;
 
     client = &server_data->clients_arr[*client_id];
+
     pthread_mutex_unlock(&mutex_server_data_lock);
 
     // Retreieving the name of the client
-    int name = 0;
     if (
-        name = recv(client->socket_fd,
+        recv(client->socket_fd,
         client->name,
         CLIENT_MAX_NAME_SIZE, 0) < 0
     ) {
@@ -181,6 +179,7 @@ void* pthread_handle_connection(void *args) {
         free(packed_new_massaged);
         free(new_message);
     }
+
     close(client->socket_fd);
     return NULL;
 }
