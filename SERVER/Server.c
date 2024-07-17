@@ -2,7 +2,7 @@
 
 
 pthread_mutex_t mutex_array_lock, mutex_server_data_lock;
-int clients_connected = 1; // Amount of users connected
+int clients_connected = SERVER_STARTING_CLIENTS_COUNT; // Amount of users connected
 int messages_sent = 0; // ammount of messages sent
 
 
@@ -148,6 +148,11 @@ void* pthread_handle_connection(void *args) {
 
         // adding the message to the messages array
         msg_t *new_message = (msg_t *)malloc(sizeof(msg_t));
+        if (!new_message) {
+            perror("Mallocation failed");
+            close(client->socket_fd);
+            exit(1);
+        }
         bzero(new_message, sizeof(msg_t));
 
 

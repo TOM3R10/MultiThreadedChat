@@ -20,6 +20,7 @@
 #define SERVER_LISTEN_TRIES 100
 #define SERVER_MAX_CLIENTS 100 // Maximum amount of clients in server
 #define SERVER_ADMIN_MODE_PASSWORD "--Admin 1234" // ..
+#define SERVER_STARTING_CLIENTS_COUNT 1
 typedef struct sockaddr_in SA_IN;
 typedef struct sockaddr SA;
 
@@ -37,6 +38,14 @@ typedef struct pthread_handle_connection_args {
     void *server_pointer;
 }pthread_hc_args;
 
+
+/**
+ *@brief store variables for send and recv func
+ *
+ */
+typedef struct pthread_socket_fd_args {
+ void *socket_fd;
+}pthread_fd_args;
 
 /**
  *@brief struct to store a single message

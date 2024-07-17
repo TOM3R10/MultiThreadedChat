@@ -1,7 +1,10 @@
 #include "../HEADERS/headers.h"
 
 int main() {
+    int bytes;
     client_t *client = (client_t *)malloc(sizeof(client_t));
+    pthread_t send_thread, recv_thread;
+;
 
     // Creating a mutex to lock the print
     if (pthread_mutex_init(&mutex_print, NULL) != 0) {
@@ -10,7 +13,7 @@ int main() {
     }
 
     // Creating a mutex to lock the socket functions
-    if (pthread_mutex_init(&mutex_print, NULL) != 0) {
+    if (pthread_mutex_init(&mutex_socket_funcs, NULL) != 0) {
         perror("Mutex creation has failed\n");
         return 1;
     }
@@ -53,7 +56,6 @@ int main() {
     fflush(stdin);
 
     // Sending the user name to the server
-    int bytes;
     if (send(client->socket_fd, client->name, strlen(client->name), 0) == -1) {
         perror("Failed to send user name");
         close(client->socket_fd);
@@ -62,7 +64,6 @@ int main() {
     }
 
 
-    pthread_t send_thread;
     if (pthread_create(&send_thread,
         NULL, pthread_send_message, (void *)&client->socket_fd) != 0)
     {
@@ -76,7 +77,6 @@ int main() {
 
 
     // Create a thread to recv messages from the server
-    pthread_t recv_thread;
     if (pthread_create(&recv_thread, NULL, pthread_recv_message, (void *)&client->socket_fd) != 0) {
         perror("Failed to create thread");
         close(client->socket_fd);

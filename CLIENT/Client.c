@@ -12,17 +12,18 @@
 pthread_mutex_t mutex_print, mutex_socket_funcs;
 
 
-void* pthread_recv_message(void* sock_fd) {
+void* pthread_recv_message(void* args) {
     // Create a msg struct to store the buffer
     msg_pack_t msg_pack;
 
-    pthread_mutex_lock(&mutex_print);
-    int socket_fd = *((int *)sock_fd);
-    pthread_mutex_unlock(&mutex_print);
+    pthread_mutex_lock(&mutex_socket_funcs);
+    pthread_fd_args* arg = (pthread_fd_args*)args;
+    int *socket_fd = arg->socket_fd;
+    pthread_mutex_unlock(&mutex_socket_funcs);
 
 
     while(recv(
-    socket_fd,
+    *socket_fd,
     &msg_pack,
     sizeof(msg_pack_t), 0) > 0) {
 
@@ -39,7 +40,8 @@ void* pthread_recv_message(void* sock_fd) {
 }
 
 
-void* pthread_send_message(void* fd) {
+void* pthread_send_message(void* args) {
+    int exit_flag = 1;
     msg_t *msg = (msg_t *)malloc(sizeof(msg_t));
     if (!msg)
         return NULL;
@@ -47,10 +49,11 @@ void* pthread_send_message(void* fd) {
     bzero(msg, sizeof(msg_t));
 
     pthread_mutex_lock(&mutex_print);
-    int client_fd = *(int *)(fd);
+    pthread_fd_args* arg = (pthread_fd_args*)args;
+    int *client_fd = arg->socket_fd;
     pthread_mutex_unlock(&mutex_print);
 
-    while (1) {
+    while (exit_flag) {
 
         pthread_mutex_lock(&mutex_print);
 
@@ -61,12 +64,11 @@ void* pthread_send_message(void* fd) {
         fflush(stdin);
 
         // Send message to server
-        if (send(client_fd, msg, sizeof(msg_t), 0) == -1) {
+        if (send(*client_fd, msg, sizeof(msg_t), 0) == -1) {
             perror("Failed to send message");
-            close(client_fd);
+            close(*client_fd);
             exit(1);
         }
-        usleep(50000);
     }
 
     pthread_exit(NULL);
